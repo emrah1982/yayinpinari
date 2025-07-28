@@ -1,0 +1,16 @@
+# Node.js API Dependencies
+axios==1.10.0
+cors==2.8.5
+dotenv==16.6.1
+express==4.21.2
+limiter==3.0.0
+openai==4.104.0
+winston==3.17.0
+xml2js==0.6.2
+
+# Development Dependencies
+nodemon==3.0.1
+
+# Node.js Version
+node>=14.0.0
+npm>=6.0.0
