@@ -1,2 +1,2 @@
-cd academikradar-ui
+cd akademiradar-ui
 npm start

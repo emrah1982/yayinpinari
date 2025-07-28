@@ -1,2 +1,2 @@
-cd academikradar-api
+cd akademiradar-api
 node app.js
