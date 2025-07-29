@@ -16,12 +16,18 @@ import {
     Divider,
     IconButton,
     Snackbar,
+    Tooltip,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import BookIcon from '@mui/icons-material/Book';
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
 import { addSimilarPublicationToTracking } from '../utils/viewedDocumentsUtils';
+import { 
+    ScoredSimilarPublication, 
+    rankSimilarPublications, 
+    getScoreDescription 
+} from '../utils/similarityAlgorithm';
 
 interface SimilarPublication {
     key: string;
@@ -46,15 +52,19 @@ interface SimilarPublicationsModalProps {
     onClose: () => void;
     publicationTitle: string;
     publicationAuthors?: string | string[];
+    publicationAbstract?: string;
+    publicationPublished?: string;
 }
 
 const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
     open,
     onClose,
     publicationTitle,
-    publicationAuthors
+    publicationAuthors,
+    publicationAbstract,
+    publicationPublished
 }) => {
-    const [similarPublications, setSimilarPublications] = useState<SimilarPublication[]>([]);
+    const [similarPublications, setSimilarPublications] = useState<ScoredSimilarPublication[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
@@ -89,7 +99,22 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
             }
 
             const data: OpenLibrarySearchResponse = await response.json();
-            setSimilarPublications(data.docs || []);
+            
+            // Gelişmiş benzerlik algoritması ile skorla ve sırala
+            const originalPublication = {
+                title: publicationTitle,
+                authors: publicationAuthors,
+                abstract: publicationAbstract,
+                published: publicationPublished
+            };
+            
+            const scoredPublications = rankSimilarPublications(
+                originalPublication,
+                data.docs || [],
+                0.05 // Minimum benzerlik skoru (5%)
+            );
+            
+            setSimilarPublications(scoredPublications);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Bilinmeyen bir hata oluştu');
         } finally {
@@ -129,6 +154,26 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
 
     const getOpenLibraryUrl = (key: string) => {
         return `https://openlibrary.org${key}`;
+    };
+
+    // WorldCat URL oluşturma fonksiyonu
+    const getWorldCatUrl = (publication: SimilarPublication) => {
+        // Öncelikle ISBN ile arama yapmayı dene
+        if (publication.isbn && publication.isbn.length > 0) {
+            const isbn = publication.isbn[0].replace(/[^0-9X]/g, ''); // Sadece rakam ve X
+            return `https://search.worldcat.org/search?q=bn:${isbn}`;
+        }
+        
+        // ISBN yoksa başlık ile arama yap
+        if (publication.title) {
+            const encodedTitle = encodeURIComponent(publication.title);
+            const authorQuery = publication.authors && publication.authors.length > 0 
+                ? `+au:${encodeURIComponent(publication.authors[0])}` 
+                : '';
+            return `https://search.worldcat.org/search?q=ti:${encodedTitle}${authorQuery}`;
+        }
+        
+        return null;
     };
 
     return (
@@ -212,19 +257,86 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
                                         )}
                                         
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                                            <Typography 
-                                                variant="subtitle1" 
-                                                sx={{ 
-                                                    fontWeight: 'medium',
-                                                    mb: 1,
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 2,
-                                                    WebkitBoxOrient: 'vertical',
-                                                    overflow: 'hidden'
-                                                }}
-                                            >
-                                                {publication.title}
-                                            </Typography>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                                                <Typography 
+                                                    variant="subtitle1" 
+                                                    sx={{ 
+                                                        fontWeight: 'medium',
+                                                        flex: 1,
+                                                        mr: 1,
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden'
+                                                    }}
+                                                >
+                                                    {publication.title}
+                                                </Typography>
+                                                
+                                                {/* Benzerlik Skoru */}
+                                                <Tooltip
+                                                    title={
+                                                        <Box sx={{ p: 1 }}>
+                                                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                                                Detaylı Benzerlik Skoru:
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                                📝 Başlık: {Math.round(publication.scoreBreakdown.titleScore * 100)}% (Ağırlık: %40)
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                                📚 Konu: {Math.round(publication.scoreBreakdown.subjectScore * 100)}% (Ağırlık: %35)
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                                👥 Yazar: {Math.round(publication.scoreBreakdown.authorScore * 100)}% (Ağırlık: %15)
+                                                            </Typography>
+                                                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                                                📅 Yıl: {Math.round(publication.scoreBreakdown.yearScore * 100)}% (Ağırlık: %10)
+                                                            </Typography>
+                                                            <Divider sx={{ my: 1 }} />
+                                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                                🏆 Toplam: {Math.round(publication.scoreBreakdown.totalScore * 100)}%
+                                                            </Typography>
+                                                        </Box>
+                                                    }
+                                                    arrow
+                                                    placement="left"
+                                                >
+                                                    <Box sx={{ 
+                                                        display: 'flex', 
+                                                        flexDirection: 'column', 
+                                                        alignItems: 'center',
+                                                        minWidth: 80,
+                                                        cursor: 'help',
+                                                        p: 0.5,
+                                                        borderRadius: 1,
+                                                        '&:hover': {
+                                                            bgcolor: 'rgba(0,0,0,0.04)'
+                                                        }
+                                                    }}>
+                                                        <Typography 
+                                                            variant="h6" 
+                                                            sx={{ 
+                                                                fontWeight: 'bold',
+                                                                color: getScoreDescription(publication.similarityScore).color,
+                                                                fontSize: '1.1rem'
+                                                            }}
+                                                        >
+                                                            {Math.round(publication.similarityScore * 100)}%
+                                                        </Typography>
+                                                        <Typography 
+                                                            variant="caption" 
+                                                            sx={{ 
+                                                                color: getScoreDescription(publication.similarityScore).color,
+                                                                fontSize: '0.7rem',
+                                                                textAlign: 'center',
+                                                                lineHeight: 1
+                                                            }}
+                                                        >
+                                                            {getScoreDescription(publication.similarityScore).text}
+                                                        </Typography>
+                                                    </Box>
+                                                </Tooltip>
+                                            </Box>
 
                                             {publication.authors && publication.authors.length > 0 && (
                                                 <Typography 
@@ -235,6 +347,124 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
                                                     Yazar: {publication.authors.slice(0, 3).join(', ')}
                                                     {publication.authors.length > 3 && ' ve diğerleri'}
                                                 </Typography>
+                                            )}
+
+                                            {/* Özet/Açıklama Bölümü */}
+                                            {publication.subject && publication.subject.length > 0 && (
+                                                <Box sx={{ mb: 2, p: 1.5, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'grey.200' }}>
+                                                    <Typography 
+                                                        variant="subtitle2" 
+                                                        sx={{ 
+                                                            fontWeight: 'medium',
+                                                            mb: 1,
+                                                            color: 'primary.main'
+                                                        }}
+                                                    >
+                                                        📋 Özet Bilgiler:
+                                                    </Typography>
+                                                    <Typography 
+                                                        variant="body2" 
+                                                        color="text.secondary"
+                                                        sx={{ 
+                                                            lineHeight: 1.6,
+                                                            fontSize: '0.875rem'
+                                                        }}
+                                                    >
+                                                        Bu yayın <strong>{publication.subject.slice(0, 5).join(', ')}</strong> konularını kapsamaktadır.
+                                                        {publication.subject.length > 5 && ` ve ${publication.subject.length - 5} diğer konu alanı bulunmaktadır.`}
+                                                        {publication.publisher && publication.publisher.length > 0 && (
+                                                            <> Yayıncı: <strong>{publication.publisher[0]}</strong>.</>  
+                                                        )}
+                                                        {publication.edition_count && publication.edition_count > 1 && (
+                                                            <> Bu eserin <strong>{publication.edition_count} farklı baskısı</strong> bulunmaktadır.</>  
+                                                        )}
+                                                    </Typography>
+                                                    
+                                                    {/* ISBN Bilgileri */}
+                                                    {publication.isbn && publication.isbn.length > 0 && (
+                                                        <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'grey.300' }}>
+                                                            <Typography 
+                                                                variant="subtitle2" 
+                                                                sx={{ 
+                                                                    fontWeight: 'medium',
+                                                                    mb: 0.5,
+                                                                    color: 'primary.main',
+                                                                    fontSize: '0.8rem'
+                                                                }}
+                                                            >
+                                                                📚 ISBN Bilgileri:
+                                                            </Typography>
+                                                            <Box sx={{ 
+                                                                 display: 'grid', 
+                                                                 gridTemplateColumns: 'repeat(4, 1fr)', 
+                                                                 gap: 0.5, 
+                                                                 alignItems: 'start',
+                                                                 mt: 0.5
+                                                             }}>
+                                                                 {publication.isbn.map((isbn, index) => {
+                                                                     const cleanIsbn = isbn.replace(/[^0-9X]/g, '');
+                                                                     const isbnType = cleanIsbn.length === 13 ? 'ISBN-13' : cleanIsbn.length === 10 ? 'ISBN-10' : 'ISBN';
+                                                                     
+                                                                     const handleIsbnClick = () => {
+                                                                         // Kütüphane arama sayfasına yönlendir ve ISBN'i localStorage'a kaydet
+                                                                         localStorage.setItem('searchIsbn', cleanIsbn);
+                                                                         window.open('/library-search', '_blank');
+                                                                     };
+                                                                     
+                                                                     return (
+                                                                         <Button
+                                                                             key={index}
+                                                                             onClick={handleIsbnClick}
+                                                                             variant="outlined"
+                                                                             size="small"
+                                                                             sx={{
+                                                                                 p: 0.5,
+                                                                                 minWidth: 'auto',
+                                                                                 bgcolor: 'grey.50',
+                                                                                 borderRadius: 0.5,
+                                                                                 border: '1px solid',
+                                                                                 borderColor: 'primary.main',
+                                                                                 textTransform: 'none',
+                                                                                 fontSize: '0.65rem',
+                                                                                 fontFamily: 'monospace',
+                                                                                 color: 'primary.main',
+                                                                                 '&:hover': {
+                                                                                     bgcolor: 'primary.light',
+                                                                                     color: 'white'
+                                                                                 }
+                                                                             }}
+                                                                         >
+                                                                             <Box sx={{ textAlign: 'center', wordBreak: 'break-all' }}>
+                                                                                 <Typography 
+                                                                                     variant="caption" 
+                                                                                     sx={{ 
+                                                                                         fontSize: '0.65rem',
+                                                                                         fontFamily: 'monospace',
+                                                                                         display: 'block',
+                                                                                         lineHeight: 1.2
+                                                                                     }}
+                                                                                 >
+                                                                                     <strong>{isbnType}:</strong>
+                                                                                 </Typography>
+                                                                                 <Typography 
+                                                                                     variant="caption" 
+                                                                                     sx={{ 
+                                                                                         fontSize: '0.65rem',
+                                                                                         fontFamily: 'monospace',
+                                                                                         display: 'block',
+                                                                                         lineHeight: 1.2
+                                                                                     }}
+                                                                                 >
+                                                                                     {cleanIsbn}
+                                                                                 </Typography>
+                                                                             </Box>
+                                                                         </Button>
+                                                                     );
+                                                                 }).slice(0, 8)}
+                                                             </Box>
+                                                        </Box>
+                                                    )}
+                                                </Box>
                                             )}
 
                                             <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
@@ -290,6 +520,27 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
                                                     OpenLibrary'de Görüntüle
                                                     <OpenInNewIcon sx={{ fontSize: 16 }} />
                                                 </Link>
+                                                
+                                                {(() => {
+                                                    const worldCatUrl = getWorldCatUrl(publication);
+                                                    return worldCatUrl && (
+                                                        <Button
+                                                            onClick={() => window.open(worldCatUrl, '_blank', 'noopener,noreferrer')}
+                                                            variant="outlined"
+                                                            size="small"
+                                                            color="primary"
+                                                            startIcon={<OpenInNewIcon />}
+                                                            sx={{ 
+                                                                fontSize: '0.75rem',
+                                                                py: 0.5,
+                                                                px: 1,
+                                                                textTransform: 'none'
+                                                            }}
+                                                        >
+                                                            Hangi Kütüphanede
+                                                        </Button>
+                                                    );
+                                                })()}
                                                 
                                                 <Button
                                                     onClick={() => handleTrackPublication(publication)}

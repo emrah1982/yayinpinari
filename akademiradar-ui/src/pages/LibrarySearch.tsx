@@ -185,6 +185,17 @@ const KutuphanveArama: React.FC = () => {
         populerKutuphaneleriYukle();
         sonAramalariYukle();
         favoriKitaplariYukle();
+        
+        // localStorage'dan ISBN değerini al ve otomatik doldur
+        const searchIsbn = localStorage.getItem('searchIsbn');
+        if (searchIsbn) {
+            setAramaParametreleri(onceki => ({
+                ...onceki,
+                isbn: searchIsbn
+            }));
+            // ISBN değerini kullandıktan sonra temizle
+            localStorage.removeItem('searchIsbn');
+        }
     }, []);
 
     const populerKutuphaneleriYukle = async () => {

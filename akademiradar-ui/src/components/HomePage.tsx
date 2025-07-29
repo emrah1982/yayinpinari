@@ -122,6 +122,8 @@ const HomePage = () => {
     const [similarPublicationsModalOpen, setSimilarPublicationsModalOpen] = useState(false);
     const [selectedPublicationForSimilar, setSelectedPublicationForSimilar] = useState('');
     const [selectedAuthorsForSimilar, setSelectedAuthorsForSimilar] = useState<string | string[]>('');
+    const [selectedAbstractForSimilar, setSelectedAbstractForSimilar] = useState('');
+    const [selectedPublishedForSimilar, setSelectedPublishedForSimilar] = useState('');
 
     // Get selected services based on selected types
     const getSelectedServices = () => {
@@ -451,9 +453,11 @@ const HomePage = () => {
     }, []);
 
     // Similar Publications modal handlers - YENİ
-    const handleOpenSimilarPublicationsModal = useCallback((title: string, authors?: string | string[]) => {
-        setSelectedPublicationForSimilar(title);
-        setSelectedAuthorsForSimilar(authors || '');
+    const handleOpenSimilarPublicationsModal = useCallback((result: SuccessResult) => {
+        setSelectedPublicationForSimilar(result.title);
+        setSelectedAuthorsForSimilar(result.authors || '');
+        setSelectedAbstractForSimilar(result.abstract || result.summary || '');
+        setSelectedPublishedForSimilar(result.published || '');
         setSimilarPublicationsModalOpen(true);
     }, []);
 
@@ -461,6 +465,8 @@ const HomePage = () => {
         setSimilarPublicationsModalOpen(false);
         setSelectedPublicationForSimilar('');
         setSelectedAuthorsForSimilar('');
+        setSelectedAbstractForSimilar('');
+        setSelectedPublishedForSimilar('');
     }, []);
 
     const exampleTopics = [
@@ -901,7 +907,7 @@ const HomePage = () => {
                                                             
                                                             {/* Benzer Yayınlar Butonu - YENİ */}
                                                             <Button
-                                                                onClick={() => handleOpenSimilarPublicationsModal(result.title, result.authors)}
+                                                                onClick={() => handleOpenSimilarPublicationsModal(result)}
                                                                 variant="outlined"
                                                                 size="small"
                                                                 color="info"
@@ -999,6 +1005,8 @@ const HomePage = () => {
                 onClose={handleCloseSimilarPublicationsModal}
                 publicationTitle={selectedPublicationForSimilar}
                 publicationAuthors={selectedAuthorsForSimilar}
+                publicationAbstract={selectedAbstractForSimilar}
+                publicationPublished={selectedPublishedForSimilar}
             />
         </Container>
     );
