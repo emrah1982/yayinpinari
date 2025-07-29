@@ -15,10 +15,13 @@ import {
     Chip,
     Divider,
     IconButton,
+    Snackbar,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import BookIcon from '@mui/icons-material/Book';
+import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd';
+import { addSimilarPublicationToTracking } from '../utils/viewedDocumentsUtils';
 
 interface SimilarPublication {
     key: string;
@@ -54,6 +57,11 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
     const [similarPublications, setSimilarPublications] = useState<SimilarPublication[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // Takip etme için state'ler
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
     const searchSimilarPublications = async () => {
         if (!publicationTitle) return;
@@ -87,6 +95,26 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
         } finally {
             setLoading(false);
         }
+    };
+
+    // Yayını takip listesine ekle
+    const handleTrackPublication = (publication: SimilarPublication) => {
+        const success = addSimilarPublicationToTracking(publication);
+        
+        if (success) {
+            setSnackbarMessage(`"${publication.title}" takip listesine eklendi!`);
+            setSnackbarSeverity('success');
+        } else {
+            setSnackbarMessage('Bu yayın zaten takip listesinde mevcut.');
+            setSnackbarSeverity('error');
+        }
+        
+        setSnackbarOpen(true);
+    };
+
+    // Snackbar'ı kapat
+    const handleCloseSnackbar = () => {
+        setSnackbarOpen(false);
     };
 
     useEffect(() => {
@@ -125,7 +153,7 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <BookIcon color="primary" />
                     <Typography variant="h6">
-                        Benzer Yayınlar
+                        Benzer Yayınlar (En fazla 10 tane)
                     </Typography>
                 </Box>
                 <IconButton onClick={onClose} size="small">
@@ -247,7 +275,7 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
                                                 </Typography>
                                             )}
 
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                                                 <Link
                                                     href={getOpenLibraryUrl(publication.key)}
                                                     target="_blank"
@@ -262,6 +290,21 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
                                                     OpenLibrary'de Görüntüle
                                                     <OpenInNewIcon sx={{ fontSize: 16 }} />
                                                 </Link>
+                                                
+                                                <Button
+                                                    onClick={() => handleTrackPublication(publication)}
+                                                    variant="contained"
+                                                    size="small"
+                                                    color="warning"
+                                                    startIcon={<BookmarkAddIcon />}
+                                                    sx={{ 
+                                                        fontSize: '0.75rem',
+                                                        py: 0.5,
+                                                        px: 1
+                                                    }}
+                                                >
+                                                    Takip Et
+                                                </Button>
                                             </Box>
                                         </Box>
                                     </Box>
@@ -277,6 +320,22 @@ const SimilarPublicationsModal: React.FC<SimilarPublicationsModalProps> = ({
                     Kapat
                 </Button>
             </DialogActions>
+            
+            {/* Takip etme bildirimleri için Snackbar */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={handleCloseSnackbar} 
+                    severity={snackbarSeverity}
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </Dialog>
     );
 };

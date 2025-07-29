@@ -27,7 +27,8 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    Select
+    Select,
+    Link
 } from '@mui/material';
 import PDFModal from './PDFModal';
 import {
@@ -655,6 +656,26 @@ const ViewedDocuments: React.FC = () => {
                                     {selectedDocument.doi && (
                                         <ListItem>
                                             <ListItemText primary="DOI" secondary={selectedDocument.doi} />
+                                        </ListItem>
+                                    )}
+                                    {selectedDocument.pdfUrl && (
+                                        <ListItem>
+                                            <ListItemText 
+                                                primary="URL" 
+                                                secondary={
+                                                    <Link 
+                                                        href={selectedDocument.pdfUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        sx={{ 
+                                                            wordBreak: 'break-all',
+                                                            fontSize: '0.875rem'
+                                                        }}
+                                                    >
+                                                        {selectedDocument.pdfUrl}
+                                                    </Link>
+                                                } 
+                                            />
                                         </ListItem>
                                     )}
                                     <ListItem>
