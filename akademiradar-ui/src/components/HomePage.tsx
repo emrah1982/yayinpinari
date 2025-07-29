@@ -44,6 +44,7 @@ import { SearchHistory, CitationInfo } from '../types';
 import CitationInfoComponent from './CitationInfo';
 import CitationModal from './CitationModal';
 import PDFModal from './PDFModal'; // YENİ: PDF Modal import
+import SimilarPublicationsModal from './SimilarPublicationsModal'; // YENİ: Benzer Yayınlar Modal import
 
 type SuccessResult = {
     id: string;
@@ -116,6 +117,11 @@ const HomePage = () => {
     const [selectedPdfAbstract, setSelectedPdfAbstract] = useState('');
     const [selectedPdfDoi, setSelectedPdfDoi] = useState('');
     const [selectedPdfPublished, setSelectedPdfPublished] = useState('');
+
+    // Similar Publications Modal states - YENİ
+    const [similarPublicationsModalOpen, setSimilarPublicationsModalOpen] = useState(false);
+    const [selectedPublicationForSimilar, setSelectedPublicationForSimilar] = useState('');
+    const [selectedAuthorsForSimilar, setSelectedAuthorsForSimilar] = useState<string | string[]>('');
 
     // Get selected services based on selected types
     const getSelectedServices = () => {
@@ -442,6 +448,19 @@ const HomePage = () => {
         setCitationModalOpen(false);
         setSelectedCitationInfo(null);
         setSelectedPublicationTitle('');
+    }, []);
+
+    // Similar Publications modal handlers - YENİ
+    const handleOpenSimilarPublicationsModal = useCallback((title: string, authors?: string | string[]) => {
+        setSelectedPublicationForSimilar(title);
+        setSelectedAuthorsForSimilar(authors || '');
+        setSimilarPublicationsModalOpen(true);
+    }, []);
+
+    const handleCloseSimilarPublicationsModal = useCallback(() => {
+        setSimilarPublicationsModalOpen(false);
+        setSelectedPublicationForSimilar('');
+        setSelectedAuthorsForSimilar('');
     }, []);
 
     const exampleTopics = [
@@ -880,6 +899,16 @@ const HomePage = () => {
                                                                 📊 Atıf Bilgisi
                                                             </Button>
                                                             
+                                                            {/* Benzer Yayınlar Butonu - YENİ */}
+                                                            <Button
+                                                                onClick={() => handleOpenSimilarPublicationsModal(result.title, result.authors)}
+                                                                variant="outlined"
+                                                                size="small"
+                                                                color="info"
+                                                            >
+                                                                📚 Benzer Yayınlar
+                                                            </Button>
+                                                            
                                                             {/* Açık Erişim Göstergesi */}
                                                             {(result.isOpenAccess || result.citationInfo?.details?.isOpenAccess) && (
                                                                 <Box 
@@ -962,6 +991,14 @@ const HomePage = () => {
                 abstract={selectedPdfAbstract}
                 doi={selectedPdfDoi}
                 published={selectedPdfPublished}
+            />
+
+            {/* Similar Publications Modal - YENİ */}
+            <SimilarPublicationsModal
+                open={similarPublicationsModalOpen}
+                onClose={handleCloseSimilarPublicationsModal}
+                publicationTitle={selectedPublicationForSimilar}
+                publicationAuthors={selectedAuthorsForSimilar}
             />
         </Container>
     );
