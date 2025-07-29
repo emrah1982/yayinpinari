@@ -15,6 +15,12 @@ const locAPI = require('../services/fetchLoc');
 router.get('/', async (req, res) => {
   try {
     const { query, page = 1, limit = 10, sources = ['core,arxiv,pubmed,openlibrary,medlineplus,pubchem,pmc,loc,z3950'] } = req.query;
+    
+    // Sayfa ve limit parametrelerini number'a dönüştür
+    const pageNumber = parseInt(page) || 1;
+    const limitNumber = parseInt(limit) || 10;
+    
+    console.log(`🔍 Arama: "${query}", Sayfa: ${pageNumber}, Limit: ${limitNumber}`);
     const sourceList = sources.toString().toLowerCase().split(',');
 
     if (!query) {
@@ -38,7 +44,7 @@ router.get('/', async (req, res) => {
     
     if (sourceList.includes('core')) {
       promises.push(
-        coreAPI.searchArticles(query, page, limit)
+        coreAPI.searchArticles(query, pageNumber, limitNumber)
           .then(data => {
             results.core = data;
             return { success: true, data };
@@ -52,7 +58,7 @@ router.get('/', async (req, res) => {
 
     if (sourceList.includes('arxiv')) {
       promises.push(
-        arxivAPI.searchArticles(query, 0, limit)
+        arxivAPI.searchArticles(query, (pageNumber - 1) * limitNumber, limitNumber)
           .then(data => {
             results.arxiv = data;
             return { success: true, data };
@@ -66,7 +72,7 @@ router.get('/', async (req, res) => {
 
     if (sourceList.includes('pubmed')) {
       promises.push(
-        pubmedAPI.searchArticles(query, page, limit)
+        pubmedAPI.searchArticles(query, pageNumber, limitNumber)
           .then(data => {
             results.pubmed = data;
             return { success: true, data };
@@ -80,7 +86,7 @@ router.get('/', async (req, res) => {
 
     if (sourceList.includes('openlibrary')) {
       promises.push(
-        openLibraryAPI.searchBooks(query, page, limit)
+        openLibraryAPI.searchBooks(query, pageNumber, limitNumber)
           .then(data => {
             results.openlibrary = data;
             return { success: true, data };
@@ -94,7 +100,7 @@ router.get('/', async (req, res) => {
 
     if (sourceList.includes('medlineplus')) {
       promises.push(
-        medlinePlusAPI.searchHealth(query, page, limit)
+        medlinePlusAPI.searchHealth(query, pageNumber, limitNumber)
           .then(data => {
             results.medlineplus = data;
             return { success: true, data };
@@ -108,7 +114,7 @@ router.get('/', async (req, res) => {
 
     if (sourceList.includes('pubchem')) {
       promises.push(
-        pubchemAPI.searchCompounds(query, page, limit)
+        pubchemAPI.searchCompounds(query, pageNumber, limitNumber)
           .then(data => {
             results.pubchem = data;
             return { success: true, data };
@@ -122,7 +128,7 @@ router.get('/', async (req, res) => {
 
     if (sourceList.includes('pmc')) {
       promises.push(
-        pubmedCentralAPI.searchArticles(query, page, limit)
+        pubmedCentralAPI.searchArticles(query, pageNumber, limitNumber)
           .then(data => {
             results.pmc = data;
             return { success: true, data };
@@ -136,7 +142,7 @@ router.get('/', async (req, res) => {
 
     if (sourceList.includes('loc')) {
       promises.push(
-        locAPI.searchCatalog(query, page, limit)
+        locAPI.searchCatalog(query, pageNumber, limitNumber)
           .then(data => {
             results.loc = data;
             return { success: true, data };
