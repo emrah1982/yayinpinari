@@ -54,6 +54,7 @@ type SuccessResult = {
     summary?: string;
     published?: string;
     doi?: string;
+    isbn?: string | string[]; // YENİ: ISBN bilgisi eklendi
     url?: string;
     source: string;
     citationInfo?: CitationInfo;
@@ -904,6 +905,52 @@ const HomePage = () => {
                                                             >
                                                                 📊 Atıf Bilgisi
                                                             </Button>
+                                                            
+                                                            {/* ISBN/DOI Bilgisi - YENİ */}
+                                                            {(result.isbn || result.doi) && (
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                                    {result.isbn && (
+                                                                        <Chip
+                                                                            label={`ISBN: ${Array.isArray(result.isbn) ? result.isbn[0] : result.isbn}`}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            color="primary"
+                                                                            sx={{ 
+                                                                                fontSize: '0.7rem',
+                                                                                fontFamily: 'monospace',
+                                                                                '&:hover': {
+                                                                                    bgcolor: 'primary.light',
+                                                                                    color: 'white'
+                                                                                }
+                                                                            }}
+                                                                            onClick={() => {
+                                                                                const isbn = Array.isArray(result.isbn) ? result.isbn[0] : result.isbn;
+                                                                                if (isbn) {
+                                                                                    localStorage.setItem('searchIsbn', isbn);
+                                                                                    window.open('/library-search', '_blank');
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    {result.doi && !result.isbn && (
+                                                                        <Chip
+                                                                            label={`DOI: ${result.doi.substring(0, 20)}${result.doi.length > 20 ? '...' : ''}`}
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            color="secondary"
+                                                                            sx={{ 
+                                                                                fontSize: '0.7rem',
+                                                                                fontFamily: 'monospace',
+                                                                                '&:hover': {
+                                                                                    bgcolor: 'secondary.light',
+                                                                                    color: 'white'
+                                                                                }
+                                                                            }}
+                                                                            onClick={() => window.open(`https://doi.org/${result.doi}`, '_blank')}
+                                                                        />
+                                                                    )}
+                                                                </Box>
+                                                            )}
                                                             
                                                             {/* Benzer Yayınlar Butonu - YENİ */}
                                                             <Button

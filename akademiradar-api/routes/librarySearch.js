@@ -66,21 +66,21 @@ router.post('/find-publication', async (req, res) => {
                     if (searchParams.isbn && searchParams.isbn.trim()) {
                         if (typeof service.searchBooks === 'function') {
                             console.log(`[LibrarySearch] ${serviceName} - ISBN ile arama: ${searchParams.isbn.trim()}`);
-                            const result = await service.searchBooks(searchParams.isbn.trim(), { searchType: 'isbn', count: 5 });
+                            const result = await service.searchBooks(searchParams.isbn.trim(), { searchType: 'isbn', count: 100 });
                             console.log(`[LibrarySearch] ${serviceName} - ISBN sonuç:`, result);
                             searchResults = result?.results || result?.books || result || [];
                         }
                     } else if (searchParams.title && searchParams.title.trim()) {
                         if (typeof service.searchBooks === 'function') {
                             console.log(`[LibrarySearch] ${serviceName} - Başlık ile arama: ${searchParams.title.trim()}`);
-                            const result = await service.searchBooks(searchParams.title.trim(), { searchType: 'title', count: 5 });
+                            const result = await service.searchBooks(searchParams.title.trim(), { searchType: 'title', count: 100 });
                             console.log(`[LibrarySearch] ${serviceName} - Başlık sonuç:`, JSON.stringify(result, null, 2));
                             searchResults = result?.results || result?.books || result || [];
                         }
                     } else if (searchParams.author && searchParams.author.trim()) {
                         if (typeof service.searchBooks === 'function') {
                             console.log(`[LibrarySearch] ${serviceName} - Yazar ile arama: ${searchParams.author.trim()}`);
-                            const result = await service.searchBooks(searchParams.author.trim(), { searchType: 'author', count: 5 });
+                            const result = await service.searchBooks(searchParams.author.trim(), { searchType: 'author', count: 100 });
                             console.log(`[LibrarySearch] ${serviceName} - Yazar sonuç:`, result);
                             searchResults = result?.results || result?.books || result || [];
                         }
